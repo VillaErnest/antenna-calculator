@@ -32,6 +32,7 @@ function AppShell() {
   const { error, readyModules } = usePyodideContext();
   const { theme, toggle } = useTheme();
   const [page, setPage] = useState<Page>("home");
+  const [activeTab, setActiveTab] = useState("short-dipole");
 
   useEffect(() => {
     if (error) toast.error(error, 0);
@@ -69,7 +70,7 @@ function AppShell() {
         {page === "credits" ? (
           <CreditsPage />
         ) : (
-          <Tabs defaultValue="short-dipole">
+          <Tabs defaultValue="short-dipole" value={activeTab} onValueChange={setActiveTab}>
             <TabsList>
               <TabsTrigger value="short-dipole" className="gap-1.5">
                 Short Dipole
@@ -125,8 +126,9 @@ function AppShell() {
               </span>
             </div>
             <p className="text-xs leading-relaxed text-muted-foreground">
-              Browser-based antenna design tool for short dipole and loop
-              antennas. Compute electrical parameters instantly.
+              Browser-based antenna design tool for short dipole, loop,
+              Yagi-Uda, and monopole antennas. Compute electrical parameters
+              instantly.
             </p>
           </div>
 
@@ -138,21 +140,27 @@ function AppShell() {
             <ul className="space-y-2 text-xs text-muted-foreground">
               <li
                 className="cursor-pointer hover:text-foreground transition-colors"
-                onClick={() => setPage("home")}
+                onClick={() => { setPage("home"); setActiveTab("short-dipole"); }}
               >
                 Short Dipole Antenna
               </li>
               <li
                 className="cursor-pointer hover:text-foreground transition-colors"
-                onClick={() => setPage("home")}
+                onClick={() => { setPage("home"); setActiveTab("loop"); }}
               >
                 Loop Antenna
               </li>
               <li
                 className="cursor-pointer hover:text-foreground transition-colors"
-                onClick={() => setPage("home")}
+                onClick={() => { setPage("home"); setActiveTab("yagi"); }}
               >
                 Yagi-Uda Antenna
+              </li>
+              <li
+                className="cursor-pointer hover:text-foreground transition-colors"
+                onClick={() => { setPage("home"); setActiveTab("monopole"); }}
+              >
+                Monopole Antenna
               </li>
               <li
                 className="cursor-pointer hover:text-foreground transition-colors"

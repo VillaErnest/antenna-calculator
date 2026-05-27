@@ -42,7 +42,7 @@ const defaultForm = {
 };
 
 export function LoopAntennaCalculator() {
-  const { compute, readyModules, status, statusDetail } = usePyodideContext();
+  const { compute, readyModules } = usePyodideContext();
   const isReady = readyModules.has("loop_antenna");
   const [form, setForm] = useState(defaultForm);
   const [result, setResult] = useState<LoopResult | null>(null);

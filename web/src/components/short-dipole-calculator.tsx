@@ -49,7 +49,7 @@ const defaultForm = {
 };
 
 export function ShortDipoleCalculator() {
-  const { compute, readyModules, status, statusDetail } = usePyodideContext();
+  const { compute, readyModules } = usePyodideContext();
   const isReady = readyModules.has("short_dipole");
   const [form, setForm] = useState(defaultForm);
   const [result, setResult] = useState<ShortDipoleResult | null>(null);

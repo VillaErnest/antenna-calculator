@@ -155,7 +155,7 @@ export function YagiUdaCalculator() {
   const traces = useMemo(() => {
     if (!result) return { e: null, h: null };
     const theta = result.pattern_theta_deg;
-    const eTrace: Partial<Plotly.ScatterPolarData> = {
+    const eTrace: Plotly.Data = {
       type: "scatterpolar",
       r: result.pattern_e_plane_db,
       theta,
@@ -165,7 +165,7 @@ export function YagiUdaCalculator() {
       fillcolor: "rgba(59,130,246,0.12)",
       name: "E-Plane",
     };
-    const hTrace: Partial<Plotly.ScatterPolarData> = {
+    const hTrace: Plotly.Data = {
       type: "scatterpolar",
       r: result.pattern_h_plane_db,
       theta,
@@ -310,7 +310,7 @@ export function YagiUdaCalculator() {
                   {traces.e && (
                     <Plot
                       data={[traces.e as Plotly.Data]}
-                      layout={{ ...PLOT_LAYOUT, title: undefined } as Plotly.Layout}
+                      layout={PLOT_LAYOUT}
                       config={{ responsive: true, displayModeBar: false }}
                       style={{ width: "100%", height: 300 }}
                     />
@@ -326,7 +326,7 @@ export function YagiUdaCalculator() {
                   {traces.h && (
                     <Plot
                       data={[traces.h as Plotly.Data]}
-                      layout={{ ...PLOT_LAYOUT, title: undefined } as Plotly.Layout}
+                      layout={PLOT_LAYOUT}
                       config={{ responsive: true, displayModeBar: false }}
                       style={{ width: "100%", height: 300 }}
                     />

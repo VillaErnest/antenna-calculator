@@ -27,7 +27,7 @@ export default function App() {
 }
 
 function AppShell() {
-  const { error, isReady, readyModules } = usePyodideContext();
+  const { error, readyModules } = usePyodideContext();
   const { theme, toggle } = useTheme();
   const [page, setPage] = useState<Page>("home");
 

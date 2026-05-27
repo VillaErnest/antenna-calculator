@@ -8,7 +8,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, "..", "..");
 const outDir = resolve(here, "..", "public", "python");
 
-const files = ["short_dipole.py", "loop_antenna.py", "yagi_uda.py"];
+const files = ["short_dipole.py", "loop_antenna.py", "yagi_uda.py", "monopole.py"];
 
 await mkdir(outDir, { recursive: true });
 

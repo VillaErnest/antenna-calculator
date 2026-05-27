@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { ShortDipoleCalculator } from "@/components/short-dipole-calculator";
 import { LoopAntennaCalculator } from "@/components/loop-antenna-calculator";
 import { YagiUdaCalculator } from "@/components/yagi-uda-calculator";
+import { MonopoleCalculator } from "@/components/monopole-calculator";
 import { CreditsPage } from "@/components/credits-page";
 import { CalculatorSkeleton } from "@/components/loading-screen";
 import { PyodideProvider, usePyodideContext } from "@/lib/pyodide-context";
@@ -83,6 +84,12 @@ function AppShell() {
                   <Loader2 className="h-3 w-3 animate-spin" />
                 )}
               </TabsTrigger>
+              <TabsTrigger value="monopole" className="gap-1.5">
+                Monopole
+                {!readyModules.has("monopole") && (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                )}
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="short-dipole">
@@ -93,6 +100,9 @@ function AppShell() {
             </TabsContent>
             <TabsContent value="yagi">
               {readyModules.has("yagi_uda") ? <YagiUdaCalculator /> : <CalculatorSkeleton />}
+            </TabsContent>
+            <TabsContent value="monopole">
+              {readyModules.has("monopole") ? <MonopoleCalculator /> : <CalculatorSkeleton />}
             </TabsContent>
           </Tabs>
         )}

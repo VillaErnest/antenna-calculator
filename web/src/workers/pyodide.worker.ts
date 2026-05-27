@@ -57,7 +57,7 @@ async function init(): Promise<PyodideInterface> {
 
     status("loading-modules", "calculators");
     // Fetch all source files into the Pyodide virtual filesystem.
-    const modules: CalculatorModule[] = ["short_dipole", "loop_antenna", "yagi_uda"];
+    const modules: CalculatorModule[] = ["short_dipole", "loop_antenna", "yagi_uda", "monopole"];
     for (const name of modules) {
       const res = await fetch(`${self.location.origin}/python/${name}.py`);
       if (!res.ok) throw new Error(`Failed to fetch /python/${name}.py`);
@@ -142,10 +142,5 @@ self.addEventListener("message", async (ev: MessageEvent<WorkerRequest>) => {
 
 // Eagerly kick off init so the first calculation is faster.
 init().catch((err) => {
-  post({
-    type: "result",
-    id: "__init__",
-    ok: false,
-    error: err instanceof Error ? err.message : String(err),
-  });
+  status("error", err instanceof Error ? err.message : String(err));
 });

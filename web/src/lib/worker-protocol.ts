@@ -1,6 +1,6 @@
 // Wire protocol between the UI thread and the Pyodide worker.
 
-export type CalculatorModule = "short_dipole" | "loop_antenna" | "yagi_uda";
+export type CalculatorModule = "short_dipole" | "loop_antenna" | "yagi_uda" | "monopole";
 
 export type WorkerRequest =
   | { type: "init"; id: string }

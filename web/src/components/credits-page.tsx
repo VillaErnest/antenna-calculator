@@ -53,7 +53,7 @@ const SECTIONS: CreditSection[] = [
       "Computation logic and formulas for the small loop antenna model.",
     contributors: [
       { name: "Ampo" },
-      { name: "Capanag" },
+      { name: "Capanang" },
       { name: "Ellacone" },
       { name: "Emano" },
       { name: "Engaño" },

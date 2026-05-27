@@ -187,7 +187,7 @@ function AppShell() {
         {/* Bottom bar */}
         <div className="border-t">
           <div className="container flex flex-col gap-1 py-3 text-xs text-muted-foreground sm:flex-row sm:h-11 sm:py-0 sm:items-center sm:justify-between">
-            <span>© 2026 Ernest Villacorta. All rights reserved.</span>
+            <span>© 2026 Villacorta, Ernest Louis. All rights reserved.</span>
             <span>Built with love and code.</span>
           </div>
         </div>

@@ -17,7 +17,7 @@ const SECTIONS: CreditSection[] = [
     description:
       "Design, development, and Python integration of the browser-based tool.",
     contributors: [
-      { name: "Ernest Villacorta", role: "Web app & Python integration" },
+      { name: "Villacorta, Ernest Louis", role: "Web app & Python integration" },
     ],
   },
   {

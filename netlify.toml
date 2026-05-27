@@ -1,0 +1,25 @@
+[build]
+  base    = "web"
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# SPA fallback
+[[redirects]]
+  from = "/*"
+  to   = "/index.html"
+  status = 200
+
+# Long-cache hashed assets
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Python source files: short cache, allow worker fetch
+[[headers]]
+  for = "/python/*"
+  [headers.values]
+    Cache-Control = "public, max-age=300"

@@ -1,0 +1,14 @@
+node_modules
+dist
+dist-ssr
+*.local
+*.tsbuildinfo
+
+# Build-time generated copy of the Python source-of-truth
+public/python
+
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.log

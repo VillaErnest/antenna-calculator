@@ -328,7 +328,7 @@ export function YagiUdaCalculator() {
           </>
         )}
 
-        {!result && !error && (
+        {!result && (
           <div className="flex h-48 items-center justify-center rounded-lg border border-dashed">
             <p className="text-sm text-muted-foreground">
               Fill in the parameters and click Calculate

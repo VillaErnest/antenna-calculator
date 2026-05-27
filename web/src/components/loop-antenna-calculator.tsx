@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Plot from "react-plotly.js";
+import type Plotly from "plotly.js";
 import { Loader2, Calculator, Download } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -17,6 +18,53 @@ import { ResultsTable, type ResultRow } from "@/components/results-table";
 import { usePyodideContext } from "@/lib/pyodide-context";
 import { toast } from "@/components/ui/toast";
 import { formatNumber } from "@/lib/utils";
+
+function useDarkMode(): boolean {
+  const [dark, setDark] = useState(() =>
+    document.documentElement.classList.contains("dark")
+  );
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setDark(document.documentElement.classList.contains("dark"));
+    });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+    return () => observer.disconnect();
+  }, []);
+  return dark;
+}
+
+function buildPlotLayout(dark: boolean): Partial<Plotly.Layout> {
+  const text = dark ? "#e2e8f0" : "#1e293b";
+  const grid = dark ? "#334155" : "#e2e8f0";
+  return {
+    polar: {
+      radialaxis: {
+        visible: true,
+        range: [-40, 0],
+        tickvals: [-40, -30, -20, -10, 0],
+        tickfont: { size: 9, color: text },
+        gridcolor: grid,
+        linecolor: grid,
+      },
+      angularaxis: {
+        tickfont: { size: 9, color: text },
+        gridcolor: grid,
+        linecolor: grid,
+      },
+      bgcolor: "transparent",
+    },
+    paper_bgcolor: "transparent",
+    plot_bgcolor: "transparent",
+    margin: { t: 36, r: 16, b: 16, l: 16 },
+    autosize: true,
+    height: 420,
+    showlegend: false,
+    font: { size: 10, color: text },
+  };
+}
 
 type LoopResult = {
   frequency_mhz: number;
@@ -48,6 +96,8 @@ export function LoopAntennaCalculator() {
   const [form, setForm] = useState(defaultForm);
   const [result, setResult] = useState<LoopResult | null>(null);
   const [running, setRunning] = useState(false);
+  const isDark = useDarkMode();
+  const plotLayout = useMemo(() => buildPlotLayout(isDark), [isDark]);
 
   const update = (k: keyof typeof form, v: string) =>
     setForm((f) => ({ ...f, [k]: v }));
@@ -238,25 +288,7 @@ export function LoopAntennaCalculator() {
                     name: "Pattern",
                   },
                 ]}
-                layout={{
-                  autosize: true,
-                  height: 420,
-                  margin: { t: 30, b: 30, l: 30, r: 30 },
-                  polar: {
-                    radialaxis: {
-                      range: [-40, 0],
-                      tickvals: [-30, -20, -10, 0],
-                      tickfont: { size: 10 },
-                    },
-                    angularaxis: {
-                      direction: "clockwise",
-                      rotation: 90,
-                    },
-                  },
-                  showlegend: false,
-                  paper_bgcolor: "rgba(0,0,0,0)",
-                  plot_bgcolor: "rgba(0,0,0,0)",
-                }}
+                layout={plotLayout}
                 config={{ displaylogo: false, responsive: true }}
                 style={{ width: "100%" }}
                 useResizeHandler

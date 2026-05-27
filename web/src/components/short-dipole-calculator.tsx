@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Plot from "react-plotly.js";
 import { Loader2, Download, Copy, Calculator } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -15,6 +16,7 @@ import {
 } from "@/components/ui/card";
 import { ResultsTable, type ResultRow } from "@/components/results-table";
 import { usePyodideContext } from "@/lib/pyodide-context";
+import { toast } from "@/components/ui/toast";
 import { formatNumber } from "@/lib/utils";
 
 type ShortDipoleResult = {
@@ -36,6 +38,52 @@ type ShortDipoleResult = {
   state: "valid" | "warning" | "error";
 };
 
+function useDarkMode(): boolean {
+  const [dark, setDark] = useState(() =>
+    document.documentElement.classList.contains("dark")
+  );
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setDark(document.documentElement.classList.contains("dark"));
+    });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+    return () => observer.disconnect();
+  }, []);
+  return dark;
+}
+
+function buildPlotLayout(dark: boolean): Partial<Plotly.Layout> {
+  const text = dark ? "#e2e8f0" : "#1e293b";
+  const grid = dark ? "#334155" : "#e2e8f0";
+  return {
+    polar: {
+      radialaxis: {
+        visible: true,
+        range: [-40, 0],
+        tickvals: [-40, -30, -20, -10, 0],
+        tickfont: { size: 9, color: text },
+        gridcolor: grid,
+        linecolor: grid,
+      },
+      angularaxis: {
+        tickfont: { size: 9, color: text },
+        gridcolor: grid,
+        linecolor: grid,
+      },
+      bgcolor: "transparent",
+    },
+    paper_bgcolor: "transparent",
+    plot_bgcolor: "transparent",
+    margin: { t: 36, r: 16, b: 16, l: 16 },
+    showlegend: true,
+    legend: { font: { size: 10, color: text } },
+    font: { size: 10, color: text },
+  };
+}
+
 const defaultForm = {
   freq_value: "100",
   freq_unit: "MHz",
@@ -54,14 +102,14 @@ export function ShortDipoleCalculator() {
   const [form, setForm] = useState(defaultForm);
   const [result, setResult] = useState<ShortDipoleResult | null>(null);
   const [running, setRunning] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const isDark = useDarkMode();
+  const plotLayout = useMemo(() => buildPlotLayout(isDark), [isDark]);
 
   const update = (k: keyof typeof form, v: string) =>
     setForm((f) => ({ ...f, [k]: v }));
 
   async function onCalculate(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
     setRunning(true);
     try {
       const payload = {
@@ -78,11 +126,46 @@ export function ShortDipoleCalculator() {
       const r = await compute<ShortDipoleResult>("short_dipole", payload);
       setResult(r);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      toast.error(err instanceof Error ? err.message : String(err));
     } finally {
       setRunning(false);
     }
   }
+
+  const patternTraces = useMemo((): Plotly.Data[] => {
+    const theta: number[] = [];
+    const eDb: number[] = [];
+    const hDb: number[] = [];
+    for (let i = 0; i <= 360; i++) {
+      const rad = (i * Math.PI) / 180;
+      const e = Math.max(Math.abs(Math.sin(rad)), 1e-10);
+      theta.push(i);
+      eDb.push(20 * Math.log10(e));
+      hDb.push(0);
+    }
+    return [
+      {
+        type: "scatterpolar",
+        r: eDb,
+        theta,
+        mode: "lines",
+        line: { color: "#3b82f6", width: 2 },
+        fill: "toself",
+        fillcolor: "rgba(59,130,246,0.12)",
+        name: "E-Plane",
+      } as Plotly.Data,
+      {
+        type: "scatterpolar",
+        r: hDb,
+        theta,
+        mode: "lines",
+        line: { color: "#f97316", width: 2 },
+        fill: "toself",
+        fillcolor: "rgba(249,115,22,0.12)",
+        name: "H-Plane",
+      } as Plotly.Data,
+    ];
+  }, []);
 
   const rows: ResultRow[] = result
     ? [
@@ -147,13 +230,8 @@ export function ShortDipoleCalculator() {
     doc.text("Short Dipole Antenna Calculator", 14, 18);
     doc.setFontSize(10);
     doc.setTextColor(80, 80, 80);
-    doc.text(
-      `Status: ${result.state.toUpperCase()}`,
-      14,
-      26,
-    );
     autoTable(doc, {
-      startY: 32,
+      startY: 26,
       head: [["Parameter", "Value", "Unit"]],
       body: rows.map((r) => [r.label, r.value, r.unit ?? ""]),
       headStyles: { fillColor: [30, 58, 138] },
@@ -250,30 +328,17 @@ export function ShortDipoleCalculator() {
           <CardTitle>Results</CardTitle>
           {result && (
             <div className="flex items-center gap-2">
-              <span
-                className={
-                  result.state === "valid"
-                    ? "text-xs font-medium text-emerald-600"
-                    : result.state === "warning"
-                      ? "text-xs font-medium text-amber-600"
-                      : "text-xs font-medium text-destructive"
-                }
-              >
-                {result.state.toUpperCase()}
-              </span>
               <Button variant="outline" size="sm" onClick={onCopy}>
                 <Copy className="h-3.5 w-3.5" /> Copy
               </Button>
               <Button variant="outline" size="sm" onClick={onExportPdf}>
-                <Download className="h-3.5 w-3.5" /> PDF
+                <Download className="h-3.5 w-3.5" /> Export PDF
               </Button>
             </div>
           )}
         </CardHeader>
         <CardContent>
-          {error ? (
-            <p className="text-sm text-destructive">{error}</p>
-          ) : result ? (
+          {result ? (
             <ResultsTable rows={rows} />
           ) : (
             <p className="text-sm text-muted-foreground">
@@ -282,6 +347,21 @@ export function ShortDipoleCalculator() {
           )}
         </CardContent>
       </Card>
+      {result && (
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Radiation Pattern</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Plot
+              data={patternTraces}
+              layout={plotLayout}
+              config={{ displayModeBar: false, responsive: true }}
+              style={{ width: "100%", height: 320 }}
+            />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

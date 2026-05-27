@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/card";
 import { ResultsTable, type ResultRow } from "@/components/results-table";
 import { usePyodideContext } from "@/lib/pyodide-context";
+import { toast } from "@/components/ui/toast";
 import { formatNumber } from "@/lib/utils";
 
 type YagiResult = {
@@ -89,7 +90,6 @@ export function YagiUdaCalculator() {
   const [form, setForm] = useState(defaultForm);
   const [result, setResult] = useState<YagiResult | null>(null);
   const [running, setRunning] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const update = (k: keyof typeof form, v: string) =>
     setForm((f) => ({ ...f, [k]: v }));
@@ -100,7 +100,6 @@ export function YagiUdaCalculator() {
 
   async function onCalculate(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
     setRunning(true);
     try {
       const r = await compute<YagiResult>("yagi_uda", {
@@ -114,7 +113,7 @@ export function YagiUdaCalculator() {
       });
       setResult(r);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      toast.error(err instanceof Error ? err.message : String(err));
     } finally {
       setRunning(false);
     }
@@ -278,14 +277,6 @@ export function YagiUdaCalculator() {
       </Card>
 
       <div className="space-y-4">
-        {error && (
-          <Card className="border-destructive/40 bg-destructive/5">
-            <CardContent className="pt-4 text-sm text-destructive">
-              {error}
-            </CardContent>
-          </Card>
-        )}
-
         {result && (
           <>
             <Card>

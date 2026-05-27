@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2, Moon, Radio, Sun } from "lucide-react";
 
 import {
@@ -14,6 +14,7 @@ import { YagiUdaCalculator } from "@/components/yagi-uda-calculator";
 import { MonopoleCalculator } from "@/components/monopole-calculator";
 import { CreditsPage } from "@/components/credits-page";
 import { CalculatorSkeleton } from "@/components/loading-screen";
+import { Toaster, toast } from "@/components/ui/toast";
 import { PyodideProvider, usePyodideContext } from "@/lib/pyodide-context";
 import { useTheme } from "@/lib/use-theme";
 
@@ -31,6 +32,10 @@ function AppShell() {
   const { error, readyModules } = usePyodideContext();
   const { theme, toggle } = useTheme();
   const [page, setPage] = useState<Page>("home");
+
+  useEffect(() => {
+    if (error) toast.error(error, 0);
+  }, [error]);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -106,12 +111,6 @@ function AppShell() {
             </TabsContent>
           </Tabs>
         )}
-
-        {error && (
-          <div className="mt-4 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-            {error}
-          </div>
-        )}
       </main>
 
       <footer className="border-t bg-card">
@@ -185,6 +184,8 @@ function AppShell() {
           </div>
         </div>
       </footer>
+
+      <Toaster />
     </div>
   );
 }

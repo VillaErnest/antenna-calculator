@@ -135,10 +135,27 @@ self.addEventListener("message", async (ev: MessageEvent<WorkerRequest>) => {
       type: "result",
       id: req.id,
       ok: false,
-      error: err instanceof Error ? err.message : String(err),
+      error: cleanError(err),
     });
   }
 });
+
+/**
+ * Pyodide errors include the full Python traceback. Strip it so only the
+ * final "ExceptionType: message" line (or its message) reaches the UI.
+ */
+function cleanError(err: unknown): string {
+  const raw = err instanceof Error ? err.message : String(err);
+  const lines = raw
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+  if (lines.length === 0) return "Calculation failed.";
+  const last = lines[lines.length - 1];
+  // Drop the leading "ExceptionType: " prefix if present.
+  const m = last.match(/^[A-Za-z_][\w.]*Error:\s*(.+)$/);
+  return m ? m[1] : last;
+}
 
 // Eagerly kick off init so the first calculation is faster.
 init().catch((err) => {

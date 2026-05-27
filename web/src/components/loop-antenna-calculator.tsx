@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/card";
 import { ResultsTable, type ResultRow } from "@/components/results-table";
 import { usePyodideContext } from "@/lib/pyodide-context";
+import { toast } from "@/components/ui/toast";
 import { formatNumber } from "@/lib/utils";
 
 type LoopResult = {
@@ -47,14 +48,12 @@ export function LoopAntennaCalculator() {
   const [form, setForm] = useState(defaultForm);
   const [result, setResult] = useState<LoopResult | null>(null);
   const [running, setRunning] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const update = (k: keyof typeof form, v: string) =>
     setForm((f) => ({ ...f, [k]: v }));
 
   async function onCalculate(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
     setRunning(true);
     try {
       const payload: Record<string, unknown> = {
@@ -69,7 +68,7 @@ export function LoopAntennaCalculator() {
       const r = await compute<LoopResult>("loop_antenna", payload);
       setResult(r);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      toast.error(err instanceof Error ? err.message : String(err));
     } finally {
       setRunning(false);
     }
@@ -207,14 +206,12 @@ export function LoopAntennaCalculator() {
             <CardTitle>Numerical Results</CardTitle>
             {result && (
               <Button variant="outline" size="sm" onClick={onExportPdf}>
-                <Download className="h-3.5 w-3.5" /> PDF
+                <Download className="h-3.5 w-3.5" /> Export PDF
               </Button>
             )}
           </CardHeader>
           <CardContent>
-            {error ? (
-              <p className="text-sm text-destructive">{error}</p>
-            ) : result ? (
+            {result ? (
               <ResultsTable rows={rows} />
             ) : (
               <p className="text-sm text-muted-foreground">

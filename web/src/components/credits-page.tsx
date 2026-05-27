@@ -24,7 +24,16 @@ const SECTIONS: CreditSection[] = [
     title: "Monopole Antenna Calculator",
     description:
       "Computation logic and formulas for the quarter-wave monopole antenna model.",
-    contributors: [{ name: "Galceran, Roa J.M." }],
+    contributors: [
+      { name: "Albiso" },
+      { name: "Casama" },
+      { name: "Delima" },
+      { name: "Galceran" },
+      { name: "Miñoza" },
+      { name: "Roa J.M." },
+      { name: "Timogan" },
+      { name: "Yañez" },
+    ],
   },
   {
     title: "Short Dipole Antenna Calculator",

@@ -88,7 +88,7 @@ if "/home/pyodide" not in sys.path:
 }
 
 async function runCalculator(
-  module: "short_dipole" | "loop_antenna",
+  module: CalculatorModule,
   payload: Record<string, unknown>,
 ): Promise<unknown> {
   const py = await init();

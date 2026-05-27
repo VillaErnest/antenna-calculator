@@ -68,7 +68,7 @@ function AppShell() {
 
       <main className="container flex-1 py-6">
         {page === "credits" ? (
-          <CreditsPage />
+          <CreditsPage onOpen={(tab) => { setActiveTab(tab); setPage("home"); }} />
         ) : (
           <Tabs defaultValue="short-dipole" value={activeTab} onValueChange={setActiveTab}>
             <TabsList>

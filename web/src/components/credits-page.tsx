@@ -1,4 +1,5 @@
-import { Radio } from "lucide-react";
+import { ArrowRight, Radio } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface Contributor {
   name: string;
@@ -9,6 +10,7 @@ interface CreditSection {
   title: string;
   description: string;
   contributors: Contributor[];
+  tab?: string;
 }
 
 const SECTIONS: CreditSection[] = [
@@ -24,6 +26,7 @@ const SECTIONS: CreditSection[] = [
     title: "Monopole Antenna Calculator",
     description:
       "Computation logic and formulas for the quarter-wave monopole antenna model.",
+    tab: "monopole",
     contributors: [
       { name: "Albiso" },
       { name: "Casama" },
@@ -39,6 +42,7 @@ const SECTIONS: CreditSection[] = [
     title: "Short Dipole Antenna Calculator",
     description:
       "Computation logic and formulas for the short dipole antenna model.",
+    tab: "short-dipole",
     contributors: [
       { name: "Balabag" },
       { name: "Gaputan" },
@@ -52,6 +56,7 @@ const SECTIONS: CreditSection[] = [
     title: "Yagi-Uda Antenna Calculator",
     description:
       "Computation logic and formulas for the Yagi-Uda antenna array model.",
+    tab: "yagi",
     contributors: [
       { name: "Cabalo" },
       { name: "Ganzan" },
@@ -66,6 +71,7 @@ const SECTIONS: CreditSection[] = [
     title: "Loop Antenna Calculator",
     description:
       "Computation logic and formulas for the small loop antenna model.",
+    tab: "loop",
     contributors: [
       { name: "Ampo" },
       { name: "Capanang" },
@@ -79,7 +85,7 @@ const SECTIONS: CreditSection[] = [
   },
 ];
 
-export function CreditsPage() {
+export function CreditsPage({ onOpen }: { onOpen: (tab: string) => void }) {
   return (
     <div className="mx-auto max-w-2xl space-y-10 py-10 px-4">
       {/* Page header */}
@@ -109,9 +115,21 @@ export function CreditsPage() {
         {SECTIONS.map((section) => (
           <div key={section.title} className="space-y-3">
             <div>
-              <h3 className="text-sm font-semibold text-foreground">
-                {section.title}
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-foreground">
+                  {section.title}
+                </h3>
+                {section.tab && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 gap-1 text-xs"
+                    onClick={() => onOpen(section.tab!)}
+                  >
+                    Open <ArrowRight className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
               <p className="mt-0.5 text-xs text-muted-foreground">
                 {section.description}
               </p>

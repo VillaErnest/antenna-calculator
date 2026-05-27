@@ -176,11 +176,11 @@ function AppShell() {
             <p className="text-xs font-semibold uppercase tracking-widest text-foreground">
               Course Info
             </p>
-            <ul className="space-y-2 text-xs text-muted-foreground">
-              <li>ECE 325 — Transmission Media &amp; Antenna Systems</li>
-              <li>ECE 3A · BS ECE</li>
-              <li>A.Y. 2025–2026</li>
-            </ul>
+            <div className="space-y-1 text-xs text-muted-foreground">
+              <p className="font-medium text-foreground">ECE 325</p>
+              <p>Transmission Media &amp; Antenna Systems</p>
+              <p className="pt-1">ECE 3A &middot; BS ECE &middot; A.Y. 2025&ndash;2026</p>
+            </div>
           </div>
         </div>
 

@@ -2,10 +2,13 @@
 
 ```
 antenna-calculator/
-├── short_dipole.py          ← Source of truth (CLI + importable module)
-├── loop_antenna.py          ← Source of truth (CLI + importable module)
+├── calculators/             ← Source of truth (CLI + importable Python modules)
+│   ├── short_dipole.py
+│   ├── loop_antenna.py
+│   ├── yagi_uda.py
+│   └── monopole.py
 └── web/                     ← React + Vite front-end (Pyodide in worker)
-    ├── public/python/       ← Auto-copied from repo root on dev/build
+    ├── public/python/       ← Auto-copied from ../calculators/ on dev/build
     ├── src/
     │   ├── workers/pyodide.worker.ts
     │   ├── lib/use-pyodide.ts
@@ -32,21 +35,21 @@ npm install
 npm run dev
 ```
 
-The `predev`/`prebuild` hook copies `*.py` from the repo root into
-`web/public/python/`, so editing a calculator file in the root is
-picked up on the next dev/build run.
+The `predev`/`prebuild` hook copies `calculators/*.py` into
+`web/public/python/`, so editing a calculator file is picked up on
+the next dev/build run.
 
 ## CLI usage
 
 Each calculator file remains runnable on its own:
 
 ```bash
-python short_dipole.py
-python loop_antenna.py
+python calculators/short_dipole.py
+python calculators/loop_antenna.py
 ```
 
 `pyperclip` and `reportlab` are only required for the optional CLI
-copy / PDF-export features in `short_dipole.py`.
+copy / PDF-export features in `calculators/short_dipole.py`.
 
 ## Deploying to Netlify
 

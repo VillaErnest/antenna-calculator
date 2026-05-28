@@ -35,8 +35,8 @@ def calc_lambda(f):
 
 
 def calc_rrad(L, lam):
-    # Rrad = 80 * pi^2 * (L / lambda)^2
-    return 80 * (math.pi ** 2) * ((L / lam) ** 2) if lam > 0 else 0.0
+    # Rrad = 20 * pi^2 * (L / lambda)^2
+    return 20 * (math.pi ** 2) * ((L / lam) ** 2) if lam > 0 else 0.0
 
 
 def calc_efficiency(rrad, rl):

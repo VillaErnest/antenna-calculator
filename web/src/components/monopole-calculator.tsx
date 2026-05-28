@@ -14,7 +14,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ResultsTable, type ResultRow } from "@/components/results-table";
 import { usePyodideContext } from "@/lib/pyodide-context";
 import { toast } from "@/components/ui/toast";
@@ -124,6 +123,12 @@ function buildPlotLayout(dark: boolean): Partial<Plotly.Layout> {
 }
 
 export function MonopoleCalculator() {
+  const { readyModules } = usePyodideContext();
+  const isReady = readyModules.has("monopole");
+  return <SolveParameterPanel isReady={isReady} />;
+}
+
+export function MonopoleLegacyCalculator() {
   const { compute, readyModules } = usePyodideContext();
   const isReady = readyModules.has("monopole");
   const [form, setForm] = useState(defaultForm);
@@ -253,136 +258,123 @@ export function MonopoleCalculator() {
   }
 
   return (
-    <Tabs defaultValue="general">
-      <TabsList className="mb-4">
-        <TabsTrigger value="general">General Calculator</TabsTrigger>
-        <TabsTrigger value="solve">Solve Parameter</TabsTrigger>
-      </TabsList>
-
-      <TabsContent value="general">
-        <div className="grid gap-4 lg:grid-cols-[380px_1fr]">
-          <Card>
-            <CardHeader>
-              <CardTitle>Inputs</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={onCalculate} className="space-y-3">
-                <PairField
-                  label="Frequency"
-                  valueProps={{
-                    value: form.freq_value,
-                    onChange: (e) => update("freq_value", e.target.value),
-                    type: "number",
-                    step: "any",
-                    required: true,
-                  }}
-                  unitProps={{
-                    value: form.freq_unit,
-                    onChange: (e) => update("freq_unit", e.target.value),
-                  }}
-                  units={["Hz", "kHz", "MHz", "GHz"]}
-                />
-                <PairField
-                  label="Length"
-                  valueProps={{
-                    value: form.length_value,
-                    onChange: (e) => update("length_value", e.target.value),
-                    type: "number",
-                    step: "any",
-                    required: true,
-                  }}
-                  unitProps={{
-                    value: form.length_unit,
-                    onChange: (e) => update("length_unit", e.target.value),
-                  }}
-                  units={["m", "cm", "mm"]}
-                />
-                <ScalarField
-                  label="Current (A)"
-                  value={form.current}
-                  onChange={(v) => update("current", v)}
-                />
-                <ScalarField
-                  label="Loss Resistance R_L (Ω)"
-                  value={form.loss_resistance}
-                  onChange={(v) => update("loss_resistance", v)}
-                />
-                <ScalarField
-                  label="Distance d (m)"
-                  value={form.distance}
-                  onChange={(v) => update("distance", v)}
-                />
-                <ScalarField
-                  label="Theta angle (°)"
-                  value={form.theta_deg}
-                  onChange={(v) => update("theta_deg", v)}
-                />
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={!isReady || running}
-                >
-                  {running ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" /> Calculating...
-                    </>
-                  ) : (
-                    <>
-                      <Calculator className="h-4 w-4" /> Calculate
-                    </>
-                  )}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <CardTitle>Results</CardTitle>
-              {result && (
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={onCopy}>
-                    <Copy className="h-3.5 w-3.5" /> Copy
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={onExportPdf}>
-                    <Download className="h-3.5 w-3.5" /> Export PDF
-                  </Button>
-                </div>
-              )}
-            </CardHeader>
-            <CardContent>
-              {result ? (
-                <ResultsTable rows={rows} />
+    <div className="grid gap-4 lg:grid-cols-[380px_1fr]">
+      <Card>
+        <CardHeader>
+          <CardTitle>Inputs</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={onCalculate} className="space-y-3">
+            <PairField
+              label="Frequency"
+              valueProps={{
+                value: form.freq_value,
+                onChange: (e) => update("freq_value", e.target.value),
+                type: "number",
+                step: "any",
+                required: true,
+              }}
+              unitProps={{
+                value: form.freq_unit,
+                onChange: (e) => update("freq_unit", e.target.value),
+              }}
+              units={["Hz", "kHz", "MHz", "GHz"]}
+            />
+            <PairField
+              label="Length"
+              valueProps={{
+                value: form.length_value,
+                onChange: (e) => update("length_value", e.target.value),
+                type: "number",
+                step: "any",
+                required: true,
+              }}
+              unitProps={{
+                value: form.length_unit,
+                onChange: (e) => update("length_unit", e.target.value),
+              }}
+              units={["m", "cm", "mm"]}
+            />
+            <ScalarField
+              label="Current (A)"
+              value={form.current}
+              onChange={(v) => update("current", v)}
+            />
+            <ScalarField
+              label="Loss Resistance R_L (Ω)"
+              value={form.loss_resistance}
+              onChange={(v) => update("loss_resistance", v)}
+            />
+            <ScalarField
+              label="Distance d (m)"
+              value={form.distance}
+              onChange={(v) => update("distance", v)}
+            />
+            <ScalarField
+              label="Theta angle (°)"
+              value={form.theta_deg}
+              onChange={(v) => update("theta_deg", v)}
+            />
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={!isReady || running}
+            >
+              {running ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Calculating...
+                </>
               ) : (
-                <p className="text-sm text-muted-foreground">
-                  Enter parameters and run a calculation to see results.
-                </p>
+                <>
+                  <Calculator className="h-4 w-4" /> Calculate
+                </>
               )}
-            </CardContent>
-          </Card>
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
 
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardTitle>Results</CardTitle>
           {result && (
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle>Radiation Pattern</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Plot
-                  data={patternTraces}
-                  layout={plotLayout}
-                  config={{ displayModeBar: false, responsive: true }}
-                  style={{ width: "100%", height: 320 }}
-                />
-              </CardContent>
-            </Card>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={onCopy}>
+                <Copy className="h-3.5 w-3.5" /> Copy
+              </Button>
+              <Button variant="outline" size="sm" onClick={onExportPdf}>
+                <Download className="h-3.5 w-3.5" /> Export PDF
+              </Button>
+            </div>
           )}
-        </div>
-      </TabsContent>
+        </CardHeader>
+        <CardContent>
+          {result ? (
+            <ResultsTable rows={rows} />
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Enter parameters and run a calculation to see results.
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
-      <TabsContent value="solve">
-        <SolveParameterPanel isReady={isReady} />
-      </TabsContent>
-    </Tabs>
+      {result && (
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Radiation Pattern</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Plot
+              data={patternTraces}
+              layout={plotLayout}
+              config={{ displayModeBar: false, responsive: true }}
+              style={{ width: "100%", height: 320 }}
+            />
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }
 

@@ -11,14 +11,14 @@ import { Button } from "@/components/ui/button";
 import { ShortDipoleCalculator } from "@/components/short-dipole-calculator";
 import { LoopAntennaCalculator } from "@/components/loop-antenna-calculator";
 import { YagiUdaCalculator } from "@/components/yagi-uda-calculator";
-import { MonopoleCalculator } from "@/components/monopole-calculator";
+import { MonopoleCalculator, MonopoleLegacyCalculator } from "@/components/monopole-calculator";
 import { CreditsPage } from "@/components/credits-page";
 import { CalculatorSkeleton } from "@/components/loading-screen";
 import { Toaster, toast } from "@/components/ui/toast";
 import { PyodideProvider, usePyodideContext } from "@/lib/pyodide-context";
 import { useTheme } from "@/lib/use-theme";
 
-type Page = "home" | "credits";
+type Page = "home" | "credits" | "legacy";
 
 export default function App() {
   return (
@@ -31,7 +31,9 @@ export default function App() {
 function AppShell() {
   const { error, readyModules } = usePyodideContext();
   const { theme, toggle } = useTheme();
-  const [page, setPage] = useState<Page>("home");
+  const [page, setPage] = useState<Page>(() =>
+    window.location.pathname.includes("legacy") ? "legacy" : "home"
+  );
   const [activeTab, setActiveTab] = useState("short-dipole");
 
   useEffect(() => {
@@ -69,6 +71,16 @@ function AppShell() {
       <main className="container flex-1 py-6">
         {page === "credits" ? (
           <CreditsPage onOpen={(tab) => { setActiveTab(tab); setPage("home"); }} />
+        ) : page === "legacy" ? (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <Button variant="outline" size="sm" onClick={() => { window.history.pushState({}, "", "/"); setPage("home"); }}>
+                ← Back
+              </Button>
+              <h2 className="text-lg font-semibold">Monopole — General Calculator</h2>
+            </div>
+            {readyModules.has("monopole") ? <MonopoleLegacyCalculator /> : <CalculatorSkeleton />}
+          </div>
         ) : (
           <Tabs defaultValue="short-dipole" value={activeTab} onValueChange={setActiveTab}>
             <TabsList>

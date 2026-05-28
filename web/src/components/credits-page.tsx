@@ -1,4 +1,4 @@
-import { ArrowRight, Radio } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface Contributor {
@@ -98,18 +98,6 @@ export function CreditsPage({ onOpen }: { onOpen: (tab: string) => void }) {
         </p>
       </div>
 
-      {/* Course badge */}
-      <div className="flex flex-wrap gap-2 text-xs">
-        {["ECE 325", "ECE 3A", "BS ECE", "A.Y. 2025–2026"].map((tag) => (
-          <span
-            key={tag}
-            className="rounded-md border bg-muted px-2.5 py-1 font-medium text-muted-foreground"
-          >
-            {tag}
-          </span>
-        ))}
-      </div>
-
       {/* Sections */}
       <div className="space-y-8">
         {SECTIONS.map((section) => (
@@ -155,14 +143,11 @@ export function CreditsPage({ onOpen }: { onOpen: (tab: string) => void }) {
         ))}
       </div>
 
-      {/* Built-with note */}
-      <div className="flex items-center gap-2 border-t pt-6 text-xs text-muted-foreground">
-        <Radio className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-        <span>
-          Antenna Calculator — ECE 325, Transmission Media &amp; Antenna System
-          Design
-        </span>
-      </div>
+      {/* Course info */}
+      <p className="text-sm text-muted-foreground leading-relaxed border-t pt-6">
+        Developed in partial fulfillment of the requirements for <span className="font-medium text-foreground">ECE 325 — Transmission Media &amp; Antenna Systems</span>, Third Year Section ECE 3A, Bachelor of Science in Electronics Engineering, Academic Year 2025–2026.
+      </p>
+
     </div>
   );
 }

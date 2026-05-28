@@ -100,7 +100,10 @@ async function runCalculator(
   const code = `
 import json
 import ${module} as _mod
-_result = _mod.compute(**__payload__.to_py())
+_p = __payload__.to_py()
+_fn_name = _p.pop("_call", "compute")
+_fn = getattr(_mod, _fn_name)
+_result = _fn(**_p)
 json.dumps(_result)
 `;
   const json = (await py.runPythonAsync(code)) as string;

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import Plot from "react-plotly.js";
 import { Loader2, Download, Copy, Calculator } from "lucide-react";
 import jsPDF from "jspdf";
@@ -14,6 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ResultsTable, type ResultRow } from "@/components/results-table";
 import { usePyodideContext } from "@/lib/pyodide-context";
 import { toast } from "@/components/ui/toast";
@@ -38,6 +39,26 @@ type MonopoleResult = {
   pattern_e_db: number[];
   pattern_h_db: number[];
   state: "valid" | "warning" | "error";
+};
+
+// ---- Solver types ----
+type SolverMeta = {
+  label: string;
+  inputs: string[];
+  input_labels: Record<string, string>;
+  unit: string;
+  category: string;
+  target: string;
+};
+type SolverCatalog = Record<string, SolverMeta>;
+
+type SolveResult = {
+  result: number;
+  unit: string;
+  label: string;
+  solver_key: string;
+  solver_meta: SolverMeta;
+  input_labels: Record<string, string>;
 };
 
 const defaultForm = {
@@ -232,77 +253,350 @@ export function MonopoleCalculator() {
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[380px_1fr]">
+    <Tabs defaultValue="general">
+      <TabsList className="mb-4">
+        <TabsTrigger value="general">General Calculator</TabsTrigger>
+        <TabsTrigger value="solve">Solve Parameter</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="general">
+        <div className="grid gap-4 lg:grid-cols-[380px_1fr]">
+          <Card>
+            <CardHeader>
+              <CardTitle>Inputs</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={onCalculate} className="space-y-3">
+                <PairField
+                  label="Frequency"
+                  valueProps={{
+                    value: form.freq_value,
+                    onChange: (e) => update("freq_value", e.target.value),
+                    type: "number",
+                    step: "any",
+                    required: true,
+                  }}
+                  unitProps={{
+                    value: form.freq_unit,
+                    onChange: (e) => update("freq_unit", e.target.value),
+                  }}
+                  units={["Hz", "kHz", "MHz", "GHz"]}
+                />
+                <PairField
+                  label="Length"
+                  valueProps={{
+                    value: form.length_value,
+                    onChange: (e) => update("length_value", e.target.value),
+                    type: "number",
+                    step: "any",
+                    required: true,
+                  }}
+                  unitProps={{
+                    value: form.length_unit,
+                    onChange: (e) => update("length_unit", e.target.value),
+                  }}
+                  units={["m", "cm", "mm"]}
+                />
+                <ScalarField
+                  label="Current (A)"
+                  value={form.current}
+                  onChange={(v) => update("current", v)}
+                />
+                <ScalarField
+                  label="Loss Resistance R_L (Ω)"
+                  value={form.loss_resistance}
+                  onChange={(v) => update("loss_resistance", v)}
+                />
+                <ScalarField
+                  label="Distance d (m)"
+                  value={form.distance}
+                  onChange={(v) => update("distance", v)}
+                />
+                <ScalarField
+                  label="Theta angle (°)"
+                  value={form.theta_deg}
+                  onChange={(v) => update("theta_deg", v)}
+                />
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={!isReady || running}
+                >
+                  {running ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" /> Calculating...
+                    </>
+                  ) : (
+                    <>
+                      <Calculator className="h-4 w-4" /> Calculate
+                    </>
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <CardTitle>Results</CardTitle>
+              {result && (
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={onCopy}>
+                    <Copy className="h-3.5 w-3.5" /> Copy
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={onExportPdf}>
+                    <Download className="h-3.5 w-3.5" /> Export PDF
+                  </Button>
+                </div>
+              )}
+            </CardHeader>
+            <CardContent>
+              {result ? (
+                <ResultsTable rows={rows} />
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Enter parameters and run a calculation to see results.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {result && (
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle>Radiation Pattern</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Plot
+                  data={patternTraces}
+                  layout={plotLayout}
+                  config={{ displayModeBar: false, responsive: true }}
+                  style={{ width: "100%", height: 320 }}
+                />
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </TabsContent>
+
+      <TabsContent value="solve">
+        <SolveParameterPanel isReady={isReady} />
+      </TabsContent>
+    </Tabs>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// JS pattern helper (mirrors calc_pattern_arrays in Python)
+// ---------------------------------------------------------------------------
+function jsCalcPatternArrays() {
+  const plotDeg: number[] = [];
+  const eDb: number[] = [];
+  for (let p = 0; p <= 180; p++) {
+    plotDeg.push(p);
+    const antTheta = Math.abs(90 - p) * (Math.PI / 180);
+    const s = Math.sin(antTheta);
+    const F = Math.abs(s) < 1e-10 ? 0 : Math.abs(Math.cos((Math.PI / 2) * Math.cos(antTheta)) / s);
+    eDb.push(Math.max(20 * Math.log10(Math.max(F, 1e-10)), -40));
+  }
+  return { plotDeg, eDb };
+}
+
+// ---------------------------------------------------------------------------
+// Solve Parameter Panel
+// ---------------------------------------------------------------------------
+
+function SolveParameterPanel({ isReady }: { isReady: boolean }) {
+  const { compute } = usePyodideContext();
+  const isDark = useDarkMode();
+  const plotLayout = useMemo(() => buildPlotLayout(isDark), [isDark]);
+  const [catalog, setCatalog] = useState<SolverCatalog | null>(null);
+  const [loadingCatalog, setLoadingCatalog] = useState(false);
+  const [category, setCategory] = useState("");
+  const [solverKey, setSolverKey] = useState("");
+  const [paramValues, setParamValues] = useState<Record<string, string>>({});
+  const [isRad, setIsRad] = useState(false);
+  const [result, setResult] = useState<SolveResult | null>(null);
+  const [running, setRunning] = useState(false);
+  // marker: [plotAngle, F_dB] pairs for radiation pattern
+  const [patternMarker, setPatternMarker] = useState<{ angles: number[]; fdbs: number[] } | null>(null);
+
+  // Load catalog once when panel is first ready
+  const loadCatalog = useCallback(async () => {
+    if (catalog || loadingCatalog || !isReady) return;
+    setLoadingCatalog(true);
+    try {
+      const data = await compute<SolverCatalog>("monopole", { _call: "get_solver_catalog" });
+      setCatalog(data);
+      const firstCat = Object.values(data)[0]?.category ?? "";
+      setCategory(firstCat);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoadingCatalog(false);
+    }
+  }, [catalog, loadingCatalog, isReady, compute]);
+
+  useEffect(() => {
+    if (isReady) loadCatalog();
+  }, [isReady, loadCatalog]);
+
+  const categories = useMemo(() => {
+    if (!catalog) return [];
+    return [...new Set(Object.values(catalog).map((m) => m.category))];
+  }, [catalog]);
+
+  const solversInCategory = useMemo(() => {
+    if (!catalog || !category) return {} as SolverCatalog;
+    return Object.fromEntries(
+      Object.entries(catalog).filter(([, m]) => m.category === category)
+    ) as SolverCatalog;
+  }, [catalog, category]);
+
+  // Auto-select first solver when category changes
+  useEffect(() => {
+    const keys = Object.keys(solversInCategory);
+    if (keys.length > 0) {
+      setSolverKey(keys[0]);
+      setParamValues({});
+      setResult(null);
+      setPatternMarker(null);
+    }
+  }, [solversInCategory]);
+
+  const activeMeta = catalog && solverKey ? catalog[solverKey] : null;
+
+  async function onSolve(e: React.FormEvent) {
+    e.preventDefault();
+    if (!activeMeta) return;
+    setRunning(true);
+    try {
+      const params: Record<string, unknown> = { _call: "solve", solver_key: solverKey, params: {} };
+      const inner: Record<string, number | boolean> = {};
+      for (const key of activeMeta.inputs) {
+        const raw = paramValues[key] ?? "";
+        const n = parseFloat(raw);
+        if (isNaN(n)) {
+          toast.error(`Invalid value for ${key}`);
+          setRunning(false);
+          return;
+        }
+        inner[key] = n;
+      }
+      if (activeMeta.inputs.includes("theta")) inner["is_rad"] = isRad;
+      params["params"] = inner;
+      const r = await compute<SolveResult>("monopole", params);
+      setResult(r);
+
+      // Compute radiation pattern marker
+      if (activeMeta.category === "Radiation Pattern") {
+        let thetaRad: number;
+        let fValue: number;
+        if (solverKey === "F_from_theta") {
+          // theta is input, F is result
+          const rawTheta = parseFloat(paramValues["theta"] ?? "0");
+          thetaRad = isRad ? rawTheta : rawTheta * (Math.PI / 180);
+          fValue = r.result;
+        } else {
+          // F is input, theta (rad) is result
+          thetaRad = r.result;
+          fValue = parseFloat(paramValues["F"] ?? "0");
+        }
+        const thetaDeg = thetaRad * (180 / Math.PI);
+        const fDb = Math.max(20 * Math.log10(Math.max(fValue, 1e-10)), -40);
+        // The polar plot uses plot_angle where plot_angle = 90 - theta_deg (left) and 90 + theta_deg (right)
+        const angleLeft = 90 - thetaDeg;
+        const angleRight = 90 + thetaDeg;
+        setPatternMarker({ angles: [angleLeft, angleRight], fdbs: [fDb, fDb] });
+      } else {
+        setPatternMarker(null);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  if (!isReady || loadingCatalog) {
+    return (
+      <div className="flex items-center gap-2 text-muted-foreground text-sm py-6">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        {loadingCatalog ? "Loading solver catalog…" : "Waiting for Python engine…"}
+      </div>
+    );
+  }
+
+  if (!catalog) return null;
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
       <Card>
         <CardHeader>
-          <CardTitle>Inputs</CardTitle>
+          <CardTitle>Solve for a Parameter</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={onCalculate} className="space-y-3">
-            <PairField
-              label="Frequency"
-              valueProps={{
-                value: form.freq_value,
-                onChange: (e) => update("freq_value", e.target.value),
-                type: "number",
-                step: "any",
-                required: true,
-              }}
-              unitProps={{
-                value: form.freq_unit,
-                onChange: (e) => update("freq_unit", e.target.value),
-              }}
-              units={["Hz", "kHz", "MHz", "GHz"]}
-            />
-            <PairField
-              label="Length"
-              valueProps={{
-                value: form.length_value,
-                onChange: (e) => update("length_value", e.target.value),
-                type: "number",
-                step: "any",
-                required: true,
-              }}
-              unitProps={{
-                value: form.length_unit,
-                onChange: (e) => update("length_unit", e.target.value),
-              }}
-              units={["m", "cm", "mm"]}
-            />
-            <ScalarField
-              label="Current (A)"
-              value={form.current}
-              onChange={(v) => update("current", v)}
-            />
-            <ScalarField
-              label="Loss Resistance R_L (Ω)"
-              value={form.loss_resistance}
-              onChange={(v) => update("loss_resistance", v)}
-            />
-            <ScalarField
-              label="Distance d (m)"
-              value={form.distance}
-              onChange={(v) => update("distance", v)}
-            />
-            <ScalarField
-              label="Theta angle (°)"
-              value={form.theta_deg}
-              onChange={(v) => update("theta_deg", v)}
-            />
+          <form onSubmit={onSolve} className="space-y-4">
+            {/* Category */}
+            <div className="space-y-1.5">
+              <Label>Category</Label>
+              <select
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={category}
+                onChange={(e) => { setCategory(e.target.value); setResult(null); }}
+              >
+                {categories.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
 
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={!isReady || running}
-            >
+            {/* Formula */}
+            <div className="space-y-1.5">
+              <Label>Formula</Label>
+              <select
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={solverKey}
+                onChange={(e) => { setSolverKey(e.target.value); setParamValues({}); setResult(null); }}
+              >
+                {Object.entries(solversInCategory).map(([k, m]) => (
+                  <option key={k} value={k}>{m.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Dynamic inputs */}
+            {activeMeta && activeMeta.inputs.map((inp) => (
+              <div className="space-y-1.5" key={inp}>
+                <Label>{activeMeta.input_labels[inp] ?? inp}</Label>
+                <Input
+                  type="number"
+                  step="any"
+                  value={paramValues[inp] ?? ""}
+                  onChange={(e) => setParamValues((p) => ({ ...p, [inp]: e.target.value }))}
+                  required
+                />
+              </div>
+            ))}
+
+            {/* Angle unit toggle for theta inputs */}
+            {activeMeta?.inputs.includes("theta") && (
+              <div className="flex items-center gap-4 text-sm">
+                <Label>Angle unit:</Label>
+                <label className="flex items-center gap-1 cursor-pointer">
+                  <input type="radio" checked={!isRad} onChange={() => setIsRad(false)} /> Degrees
+                </label>
+                <label className="flex items-center gap-1 cursor-pointer">
+                  <input type="radio" checked={isRad} onChange={() => setIsRad(true)} /> Radians
+                </label>
+              </div>
+            )}
+
+            <Button type="submit" className="w-full" disabled={running}>
               {running ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" /> Calculating...
-                </>
+                <><Loader2 className="h-4 w-4 animate-spin" /> Solving…</>
               ) : (
-                <>
-                  <Calculator className="h-4 w-4" /> Calculate
-                </>
+                <><Calculator className="h-4 w-4" /> Solve</>
               )}
             </Button>
           </form>
@@ -310,46 +604,120 @@ export function MonopoleCalculator() {
       </Card>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle>Results</CardTitle>
-          {result && (
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={onCopy}>
-                <Copy className="h-3.5 w-3.5" /> Copy
-              </Button>
-              <Button variant="outline" size="sm" onClick={onExportPdf}>
-                <Download className="h-3.5 w-3.5" /> Export PDF
-              </Button>
-            </div>
-          )}
+        <CardHeader>
+          <CardTitle>Result</CardTitle>
         </CardHeader>
         <CardContent>
           {result ? (
-            <ResultsTable rows={rows} />
+            <div className="space-y-4">
+              <div className="rounded-lg bg-muted p-4">
+                <p className="text-xs text-muted-foreground mb-1">Formula</p>
+                <p className="font-mono text-sm">{result.label}</p>
+              </div>
+              <div className="rounded-lg border p-4 flex flex-col items-center justify-center gap-1">
+                <p className="text-xs text-muted-foreground">
+                  {result.solver_meta.target}
+                </p>
+                <p className="text-4xl font-bold tabular-nums">
+                  {formatNumber(result.result)}
+                </p>
+                {result.unit && (
+                  <p className="text-sm text-muted-foreground">{result.unit}</p>
+                )}
+              </div>
+              {/* Show inputs used */}
+              {Object.keys(result.input_labels).length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground mb-2">Inputs used</p>
+                  <ResultsTable
+                    rows={Object.entries(result.input_labels).map(([k, lbl]) => ({
+                      label: lbl,
+                      value: paramValues[k] ?? "—",
+                    }))}
+                  />
+                </div>
+              )}
+            </div>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Enter parameters and run a calculation to see results.
+              Select a category and formula, enter the known values, and click Solve.
             </p>
           )}
         </CardContent>
       </Card>
 
-      {result && (
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Radiation Pattern</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Plot
-              data={patternTraces}
-              layout={plotLayout}
-              config={{ displayModeBar: false, responsive: true }}
-              style={{ width: "100%", height: 320 }}
-            />
-          </CardContent>
-        </Card>
+      {/* Radiation pattern chart — spans full width when available */}
+      {result?.solver_meta.category === "Radiation Pattern" && (
+        <SolverPatternChart
+          marker={patternMarker}
+          layout={plotLayout}
+          className="lg:col-span-2"
+        />
       )}
     </div>
+  );
+}
+
+function SolverPatternChart({
+  marker,
+  layout,
+  className,
+}: {
+  marker: { angles: number[]; fdbs: number[] } | null;
+  layout: Partial<Plotly.Layout>;
+  className?: string;
+}) {
+  const { plotDeg, eDb } = useMemo(() => jsCalcPatternArrays(), []);
+
+  const traces = useMemo((): Plotly.Data[] => {
+    const base: Plotly.Data[] = [
+      {
+        type: "scatterpolar",
+        r: eDb,
+        theta: plotDeg,
+        mode: "lines",
+        line: { color: "#3b82f6", width: 2 },
+        fill: "toself",
+        fillcolor: "rgba(59,130,246,0.12)",
+        name: "Norm F(θ)",
+      } as Plotly.Data,
+      {
+        type: "scatterpolar",
+        r: [0, -40, 0],
+        theta: [0, 90, 180],
+        mode: "lines",
+        line: { color: "#0f172a", width: 2 },
+        name: "Ground",
+        hoverinfo: "skip",
+      } as Plotly.Data,
+    ];
+    if (marker) {
+      base.push({
+        type: "scatterpolar",
+        r: marker.fdbs,
+        theta: marker.angles,
+        mode: "markers",
+        marker: { color: "#ef4444", size: 10, symbol: "circle" },
+        name: "Solved point",
+      } as Plotly.Data);
+    }
+    return base;
+  }, [eDb, plotDeg, marker]);
+
+  return (
+    <Card className={className}>
+      <CardHeader>
+        <CardTitle>Radiation Pattern</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Plot
+          data={traces}
+          layout={layout}
+          config={{ displayModeBar: false, responsive: true }}
+          style={{ width: "100%", height: 320 }}
+        />
+      </CardContent>
+    </Card>
   );
 }
 

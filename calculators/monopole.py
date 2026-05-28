@@ -136,7 +136,10 @@ _SOLVERS = {
     # --- E / H fields ---
     "E_from_H":        lambda p: p["H"] * ETA_0,
     "H_from_E":        lambda p: p["E"] / ETA_0,
-    # --- Effective aperture / Solid angle (already covered above) ---
+    # --- Antenna Dimensions (λ/4 monopole) ---
+    "L_from_lam":      lambda p: p["lam"] / 4,
+    "lam_from_L_dim":  lambda p: 4 * p["L"],
+    "f_from_L_dim":    lambda p: C / (4 * p["L"]),
     # --- Radiation pattern ---
     "F_from_theta":    lambda p: calc_f_theta(p["theta"] if p.get("is_rad") else math.radians(p["theta"])),
     "theta_from_F":    lambda p: _bisect_pattern(p["F"]),
@@ -184,12 +187,15 @@ SOLVER_META = {
     "H_from_Umax_r":   {"label": "|H| = (1/r)·√(2Umax/η₀)", "inputs": ["Umax", "r"],        "unit": "A/m",  "category": "Radiation Intensity",  "target": "|H|"},
     "E_from_H":        {"label": "|E| = |H|·η₀",             "inputs": ["H"],                "unit": "V/m",  "category": "Field Strengths",      "target": "|E|"},
     "H_from_E":        {"label": "|H| = |E| / η₀",           "inputs": ["E"],                "unit": "A/m",  "category": "Field Strengths",      "target": "|H|"},
+    "L_from_lam":      {"label": "L = λ/4",                      "inputs": ["lam"],              "unit": "m",    "category": "Antenna Dimensions",   "target": "L"},
+    "lam_from_L_dim":  {"label": "λ = 4L",                      "inputs": ["L"],               "unit": "m",    "category": "Antenna Dimensions",   "target": "λ"},
+    "f_from_L_dim":    {"label": "f = c / (4L)",               "inputs": ["L"],               "unit": "Hz",   "category": "Antenna Dimensions",   "target": "f"},
     "F_from_theta":    {"label": "F(θ) = cos(π/2·cosθ)/sinθ","inputs": ["theta"],            "unit": "",     "category": "Radiation Pattern",    "target": "F(θ)"},
     "theta_from_F":    {"label": "θ via bisection [F(θ)≈T]", "inputs": ["F"],                "unit": "rad",  "category": "Radiation Pattern",    "target": "θ"},
 }
 
 INPUT_LABELS = {
-    "L":      "Length L (m)",
+    "L":      "Physical Length L (m)",
     "lam":    "Wavelength λ (m)",
     "Prad":   "Radiated Power Prad (W)",
     "Irms":   "Current Irms (A)",

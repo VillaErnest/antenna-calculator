@@ -765,10 +765,22 @@ function SolveParameterPanel({ isReady }: { isReady: boolean }) {
                   {result.solver_meta.target}
                 </p>
                 <p className="text-4xl font-bold tabular-nums">
-                  {formatNumber(result.result)}
+                  {result.unit === "Hz"
+                    ? result.result >= 1e9 ? formatNumber(result.result / 1e9)
+                    : result.result >= 1e6 ? formatNumber(result.result / 1e6)
+                    : result.result >= 1e3 ? formatNumber(result.result / 1e3)
+                    : formatNumber(result.result)
+                    : formatNumber(result.result)}
                 </p>
                 {result.unit && (
-                  <p className="text-sm text-muted-foreground">{result.unit}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {result.unit === "Hz"
+                      ? result.result >= 1e9 ? "GHz"
+                      : result.result >= 1e6 ? "MHz"
+                      : result.result >= 1e3 ? "kHz"
+                      : "Hz"
+                      : result.unit}
+                  </p>
                 )}
               </div>
               {/* Show inputs used */}

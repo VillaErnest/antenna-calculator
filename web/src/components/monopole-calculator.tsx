@@ -409,6 +409,9 @@ function jsCalcPatternArrays() {
 // Solve Parameter Panel
 // ---------------------------------------------------------------------------
 
+const C = 299_792_458; // speed of light m/s
+const FREQ_MULTIPLIERS: Record<string, number> = { Hz: 1, kHz: 1e3, MHz: 1e6, GHz: 1e9 };
+
 function SolveParameterPanel({ isReady }: { isReady: boolean }) {
   const { compute } = usePyodideContext();
   const isDark = useDarkMode();
@@ -419,6 +422,12 @@ function SolveParameterPanel({ isReady }: { isReady: boolean }) {
   const [solverKey, setSolverKey] = useState("");
   const [paramValues, setParamValues] = useState<Record<string, string>>({});
   const [isRad, setIsRad] = useState(false);
+  // lam input mode
+  const [lamMode, setLamMode] = useState<"lambda" | "freq">("lambda");
+  const [freqValue, setFreqValue] = useState("");
+  const [freqUnit, setFreqUnit] = useState("MHz");
+  // Irms input mode
+  const [currentMode, setCurrentMode] = useState<"rms" | "peak">("rms");
   const [result, setResult] = useState<SolveResult | null>(null);
   const [running, setRunning] = useState(false);
   // marker: [plotAngle, F_dB] pairs for radiation pattern
@@ -477,12 +486,20 @@ function SolveParameterPanel({ isReady }: { isReady: boolean }) {
       const params: Record<string, unknown> = { _call: "solve", solver_key: solverKey, params: {} };
       const inner: Record<string, number | boolean> = {};
       for (const key of activeMeta.inputs) {
-        const raw = paramValues[key] ?? "";
-        const n = parseFloat(raw);
-        if (isNaN(n)) {
-          toast.error(`Invalid value for ${key}`);
-          setRunning(false);
-          return;
+        let n: number;
+        if (key === "lam" && lamMode === "freq") {
+          const fv = parseFloat(freqValue);
+          if (isNaN(fv) || fv <= 0) { toast.error("Invalid frequency"); setRunning(false); return; }
+          n = C / (fv * FREQ_MULTIPLIERS[freqUnit]);
+        } else if (key === "Irms" && currentMode === "peak") {
+          const raw = paramValues[key] ?? "";
+          const peak = parseFloat(raw);
+          if (isNaN(peak)) { toast.error("Invalid peak current"); setRunning(false); return; }
+          n = peak / Math.SQRT2;
+        } else {
+          const raw = paramValues[key] ?? "";
+          n = parseFloat(raw);
+          if (isNaN(n)) { toast.error(`Invalid value for ${key}`); setRunning(false); return; }
         }
         inner[key] = n;
       }
@@ -569,18 +586,70 @@ function SolveParameterPanel({ isReady }: { isReady: boolean }) {
             </div>
 
             {/* Dynamic inputs */}
-            {activeMeta && activeMeta.inputs.map((inp) => (
-              <div className="space-y-1.5" key={inp}>
-                <Label>{activeMeta.input_labels[inp] ?? inp}</Label>
-                <Input
-                  type="number"
-                  step="any"
-                  value={paramValues[inp] ?? ""}
-                  onChange={(e) => setParamValues((p) => ({ ...p, [inp]: e.target.value }))}
-                  required
-                />
-              </div>
-            ))}
+            {activeMeta && activeMeta.inputs.map((inp) => {
+              if (inp === "lam") return (
+                <div className="space-y-1.5" key={inp}>
+                  <div className="flex items-center justify-between">
+                    <Label>Wavelength λ</Label>
+                    <span className="flex gap-3 text-xs">
+                      <label className="flex items-center gap-1 cursor-pointer">
+                        <input type="radio" checked={lamMode === "lambda"} onChange={() => setLamMode("lambda")} /> λ (m)
+                      </label>
+                      <label className="flex items-center gap-1 cursor-pointer">
+                        <input type="radio" checked={lamMode === "freq"} onChange={() => setLamMode("freq")} /> Frequency
+                      </label>
+                    </span>
+                  </div>
+                  {lamMode === "lambda" ? (
+                    <Input type="number" step="any" placeholder="metres" value={paramValues[inp] ?? ""}
+                      onChange={(e) => setParamValues((p) => ({ ...p, [inp]: e.target.value }))} required />
+                  ) : (
+                    <div className="flex gap-2">
+                      <Input type="number" step="any" placeholder="value" className="flex-1"
+                        value={freqValue} onChange={(e) => setFreqValue(e.target.value)} required />
+                      <select className="w-24 rounded-md border border-input bg-background px-2 py-2 text-sm"
+                        value={freqUnit} onChange={(e) => setFreqUnit(e.target.value)}>
+                        {Object.keys(FREQ_MULTIPLIERS).map((u) => <option key={u} value={u}>{u}</option>)}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              );
+              if (inp === "Irms") return (
+                <div className="space-y-1.5" key={inp}>
+                  <div className="flex items-center justify-between">
+                    <Label>Current</Label>
+                    <span className="flex gap-3 text-xs">
+                      <label className="flex items-center gap-1 cursor-pointer">
+                        <input type="radio" checked={currentMode === "rms"} onChange={() => setCurrentMode("rms")} /> RMS (Iₚₘₛ)
+                      </label>
+                      <label className="flex items-center gap-1 cursor-pointer">
+                        <input type="radio" checked={currentMode === "peak"} onChange={() => setCurrentMode("peak")} /> Peak (I₀)
+                      </label>
+                    </span>
+                  </div>
+                  <Input type="number" step="any"
+                    placeholder={currentMode === "rms" ? "RMS current (A)" : "Peak current I₀ (A)"}
+                    value={paramValues[inp] ?? ""}
+                    onChange={(e) => setParamValues((p) => ({ ...p, [inp]: e.target.value }))} required />
+                  {currentMode === "peak" && (
+                    <p className="text-xs text-muted-foreground">Iₚₘₛ = I₀ / √2 ≈ {paramValues[inp] ? (parseFloat(paramValues[inp]) / Math.SQRT2).toFixed(5) : "—"} A</p>
+                  )}
+                </div>
+              );
+              return (
+                <div className="space-y-1.5" key={inp}>
+                  <Label>{activeMeta.input_labels[inp] ?? inp}</Label>
+                  <Input
+                    type="number"
+                    step="any"
+                    value={paramValues[inp] ?? ""}
+                    onChange={(e) => setParamValues((p) => ({ ...p, [inp]: e.target.value }))}
+                    required
+                  />
+                </div>
+              );
+            })}
 
             {/* Angle unit toggle for theta inputs */}
             {activeMeta?.inputs.includes("theta") && (

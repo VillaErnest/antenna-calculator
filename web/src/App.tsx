@@ -179,7 +179,7 @@ function AppShell() {
             <div className="space-y-1 text-xs text-muted-foreground">
               <p className="font-medium text-foreground">ECE 325</p>
               <p>Transmission Media &amp; Antenna Systems</p>
-              <p className="pt-1">ECE 3A &middot; BS ECE &middot; A.Y. 2025&ndash;2026</p>
+              <p className="pt-1">ECE 3A &nbsp;|&nbsp; BS ECE &nbsp;|&nbsp; A.Y. 2025&ndash;2026</p>
             </div>
           </div>
         </div>

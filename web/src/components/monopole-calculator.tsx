@@ -134,6 +134,7 @@ export function MonopoleLegacyCalculator() {
   const [form, setForm] = useState(defaultForm);
   const [result, setResult] = useState<MonopoleResult | null>(null);
   const [running, setRunning] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const isDark = useDarkMode();
   const plotLayout = useMemo(() => buildPlotLayout(isDark), [isDark]);
 
@@ -300,11 +301,21 @@ export function MonopoleLegacyCalculator() {
               value={form.current}
               onChange={(v) => update("current", v)}
             />
-            <ScalarField
-              label="Loss Resistance R_L (Ω)"
-              value={form.loss_resistance}
-              onChange={(v) => update("loss_resistance", v)}
-            />
+            <button
+              type="button"
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              onClick={() => setShowAdvanced((v) => !v)}
+            >
+              <span className="text-base leading-none">{showAdvanced ? "▾" : "▸"}</span>
+              Advanced
+            </button>
+            {showAdvanced && (
+              <ScalarField
+                label="Loss Resistance R_L (Ω)"
+                value={form.loss_resistance}
+                onChange={(v) => update("loss_resistance", v)}
+              />
+            )}
             <ScalarField
               label="Distance d (m)"
               value={form.distance}

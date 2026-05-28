@@ -32,7 +32,7 @@ function AppShell() {
   const { error, readyModules } = usePyodideContext();
   const { theme, toggle } = useTheme();
   const [page, setPage] = useState<Page>(() =>
-    window.location.pathname.includes("legacy") ? "legacy" : "home"
+    window.location.pathname.includes("legacy/monopole") ? "legacy" : "home"
   );
   const [activeTab, setActiveTab] = useState("short-dipole");
 
@@ -74,7 +74,7 @@ function AppShell() {
         ) : page === "legacy" ? (
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <Button variant="outline" size="sm" onClick={() => { window.history.pushState({}, "", "/"); setPage("home"); }}>
+              <Button variant="outline" size="sm" onClick={() => { window.history.pushState({}, "", "/"); setPage("home"); setActiveTab("monopole"); }}>
                 ← Back
               </Button>
               <h2 className="text-lg font-semibold">Monopole — General Calculator</h2>

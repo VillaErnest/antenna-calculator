@@ -176,6 +176,12 @@ function AppShell() {
               </li>
               <li
                 className="cursor-pointer hover:text-foreground transition-colors"
+                onClick={() => { window.history.pushState({}, "", "/legacy/monopole"); setPage("legacy"); }}
+              >
+                Monopole — General Calculator
+              </li>
+              <li
+                className="cursor-pointer hover:text-foreground transition-colors"
                 onClick={() => setPage("credits")}
               >
                 Credits

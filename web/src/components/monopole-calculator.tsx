@@ -282,16 +282,18 @@ export function MonopoleLegacyCalculator() {
         <CardContent>
           <form onSubmit={onCalculate} className="space-y-3">
             <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <Label>Frequency / Wavelength</Label>
-                <span className="flex gap-3 text-xs">
-                  <label className="flex items-center gap-1 cursor-pointer">
-                    <input type="radio" checked={freqMode === "freq"} onChange={() => setFreqMode("freq")} /> Frequency
-                  </label>
-                  <label className="flex items-center gap-1 cursor-pointer">
-                    <input type="radio" checked={freqMode === "lambda"} onChange={() => setFreqMode("lambda")} /> λ
-                  </label>
-                </span>
+              <Label>{freqMode === "freq" ? "Frequency" : "Wavelength (λ)"}</Label>
+              <div className="flex rounded-md border border-input overflow-hidden text-xs mb-1.5">
+                <button type="button"
+                  className={`flex-1 py-1 transition-colors ${
+                    freqMode === "freq" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:text-foreground"
+                  }`}
+                  onClick={() => setFreqMode("freq")}>Frequency</button>
+                <button type="button"
+                  className={`flex-1 py-1 transition-colors ${
+                    freqMode === "lambda" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:text-foreground"
+                  }`}
+                  onClick={() => setFreqMode("lambda")}>Wavelength λ</button>
               </div>
               {freqMode === "freq" ? (
                 <div className="flex gap-2">
@@ -306,7 +308,7 @@ export function MonopoleLegacyCalculator() {
                 <>
                   <div className="flex gap-2">
                     <Input className="flex-1" type="number" step="any" required
-                      placeholder="wavelength" value={lambdaValue} onChange={(e) => setLambdaValue(e.target.value)} />
+                      placeholder="e.g. 3" value={lambdaValue} onChange={(e) => setLambdaValue(e.target.value)} />
                     <select className="w-24 rounded-md border border-input bg-background px-2 py-2 text-sm"
                       value={lambdaUnit} onChange={(e) => setLambdaUnit(e.target.value)}>
                       {["m", "cm", "mm"].map((u) => <option key={u} value={u}>{u}</option>)}
@@ -316,7 +318,7 @@ export function MonopoleLegacyCalculator() {
                     const MULT: Record<string, number> = { m: 1, cm: 0.01, mm: 0.001 };
                     const f = C / (parseFloat(lambdaValue) * MULT[lambdaUnit]);
                     return isFinite(f) && f > 0
-                      ? <p className="text-xs text-muted-foreground">f = {f >= 1e9 ? (f/1e9).toFixed(4)+' GHz' : f >= 1e6 ? (f/1e6).toFixed(4)+' MHz' : f >= 1e3 ? (f/1e3).toFixed(4)+' kHz' : f.toFixed(2)+' Hz'}</p>
+                      ? <p className="text-xs text-muted-foreground">→ f = {f >= 1e9 ? (f/1e9).toFixed(4)+' GHz' : f >= 1e6 ? (f/1e6).toFixed(4)+' MHz' : f >= 1e3 ? (f/1e3).toFixed(4)+' kHz' : f.toFixed(2)+' Hz'}</p>
                       : null;
                   })()}
                 </>
@@ -338,27 +340,29 @@ export function MonopoleLegacyCalculator() {
               units={["m", "cm", "mm"]}
             />
             <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <Label>Current</Label>
-                <span className="flex gap-3 text-xs">
-                  <label className="flex items-center gap-1 cursor-pointer">
-                    <input type="radio" checked={currentMode === "rms"} onChange={() => setCurrentMode("rms")} /> RMS (Iₚₘₛ)
-                  </label>
-                  <label className="flex items-center gap-1 cursor-pointer">
-                    <input type="radio" checked={currentMode === "peak"} onChange={() => setCurrentMode("peak")} /> Peak (I₀)
-                  </label>
-                </span>
+              <Label>{currentMode === "rms" ? "Current — RMS (I\u1d63\u2098\u209b)" : "Current — Peak (I\u2080)"}</Label>
+              <div className="flex rounded-md border border-input overflow-hidden text-xs mb-1.5">
+                <button type="button"
+                  className={`flex-1 py-1 transition-colors ${
+                    currentMode === "rms" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:text-foreground"
+                  }`}
+                  onClick={() => setCurrentMode("rms")}>RMS</button>
+                <button type="button"
+                  className={`flex-1 py-1 transition-colors ${
+                    currentMode === "peak" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:text-foreground"
+                  }`}
+                  onClick={() => setCurrentMode("peak")}>Peak (I₀)</button>
               </div>
               <Input
                 type="number"
                 step="any"
-                placeholder={currentMode === "rms" ? "RMS current (A)" : "Peak current I₀ (A)"}
+                placeholder={currentMode === "rms" ? "e.g. 0.707" : "e.g. 1.0"}
                 value={form.current}
                 onChange={(e) => update("current", e.target.value)}
                 required
               />
               {currentMode === "peak" && form.current && (
-                <p className="text-xs text-muted-foreground">Iₚₘₛ = I₀ / √2 ≈ {(Number(form.current) / Math.SQRT2).toFixed(5)} A</p>
+                <p className="text-xs text-muted-foreground">\u2192 I\u1d63\u2098\u209b = I\u2080 / \u221a2 \u2248 {(Number(form.current) / Math.SQRT2).toFixed(5)} A</p>
               )}
             </div>
             <button
@@ -649,19 +653,21 @@ function SolveParameterPanel({ isReady }: { isReady: boolean }) {
             {activeMeta && activeMeta.inputs.map((inp) => {
               if (inp === "lam") return (
                 <div className="space-y-1.5" key={inp}>
-                  <div className="flex items-center justify-between">
-                    <Label>Wavelength λ</Label>
-                    <span className="flex gap-3 text-xs">
-                      <label className="flex items-center gap-1 cursor-pointer">
-                        <input type="radio" checked={lamMode === "lambda"} onChange={() => setLamMode("lambda")} /> λ (m)
-                      </label>
-                      <label className="flex items-center gap-1 cursor-pointer">
-                        <input type="radio" checked={lamMode === "freq"} onChange={() => setLamMode("freq")} /> Frequency
-                      </label>
-                    </span>
+                  <Label>{lamMode === "lambda" ? "Wavelength (λ)" : "Frequency → λ"}</Label>
+                  <div className="flex rounded-md border border-input overflow-hidden text-xs mb-1.5">
+                    <button type="button"
+                      className={`flex-1 py-1 transition-colors ${
+                        lamMode === "lambda" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:text-foreground"
+                      }`}
+                      onClick={() => setLamMode("lambda")}>Wavelength λ</button>
+                    <button type="button"
+                      className={`flex-1 py-1 transition-colors ${
+                        lamMode === "freq" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:text-foreground"
+                      }`}
+                      onClick={() => setLamMode("freq")}>Frequency</button>
                   </div>
                   {lamMode === "lambda" ? (
-                    <Input type="number" step="any" placeholder="metres" value={paramValues[inp] ?? ""}
+                    <Input type="number" step="any" placeholder="e.g. 3" value={paramValues[inp] ?? ""}
                       onChange={(e) => setParamValues((p) => ({ ...p, [inp]: e.target.value }))} required />
                   ) : (
                     <div className="flex gap-2">
@@ -673,27 +679,35 @@ function SolveParameterPanel({ isReady }: { isReady: boolean }) {
                       </select>
                     </div>
                   )}
+                  {lamMode === "freq" && freqValue && (() => {
+                    const lam = C / (parseFloat(freqValue) * FREQ_MULTIPLIERS[freqUnit]);
+                    return isFinite(lam) && lam > 0
+                      ? <p className="text-xs text-muted-foreground">→ λ = {lam.toFixed(4)} m</p>
+                      : null;
+                  })()}
                 </div>
               );
               if (inp === "Irms") return (
                 <div className="space-y-1.5" key={inp}>
-                  <div className="flex items-center justify-between">
-                    <Label>Current</Label>
-                    <span className="flex gap-3 text-xs">
-                      <label className="flex items-center gap-1 cursor-pointer">
-                        <input type="radio" checked={currentMode === "rms"} onChange={() => setCurrentMode("rms")} /> RMS (Iₚₘₛ)
-                      </label>
-                      <label className="flex items-center gap-1 cursor-pointer">
-                        <input type="radio" checked={currentMode === "peak"} onChange={() => setCurrentMode("peak")} /> Peak (I₀)
-                      </label>
-                    </span>
+                  <Label>{currentMode === "rms" ? "Current — RMS (Iᵣₘₛ)" : "Current — Peak (I₀)"}</Label>
+                  <div className="flex rounded-md border border-input overflow-hidden text-xs mb-1.5">
+                    <button type="button"
+                      className={`flex-1 py-1 transition-colors ${
+                        currentMode === "rms" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:text-foreground"
+                      }`}
+                      onClick={() => setCurrentMode("rms")}>RMS</button>
+                    <button type="button"
+                      className={`flex-1 py-1 transition-colors ${
+                        currentMode === "peak" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:text-foreground"
+                      }`}
+                      onClick={() => setCurrentMode("peak")}>Peak (I₀)</button>
                   </div>
                   <Input type="number" step="any"
-                    placeholder={currentMode === "rms" ? "RMS current (A)" : "Peak current I₀ (A)"}
+                    placeholder={currentMode === "rms" ? "e.g. 0.707" : "e.g. 1.0"}
                     value={paramValues[inp] ?? ""}
                     onChange={(e) => setParamValues((p) => ({ ...p, [inp]: e.target.value }))} required />
-                  {currentMode === "peak" && (
-                    <p className="text-xs text-muted-foreground">Iₚₘₛ = I₀ / √2 ≈ {paramValues[inp] ? (parseFloat(paramValues[inp]) / Math.SQRT2).toFixed(5) : "—"} A</p>
+                  {currentMode === "peak" && paramValues[inp] && (
+                    <p className="text-xs text-muted-foreground">→ Iᵣₘₛ = I₀ / √2 ≈ {(parseFloat(paramValues[inp]) / Math.SQRT2).toFixed(5)} A</p>
                   )}
                 </div>
               );

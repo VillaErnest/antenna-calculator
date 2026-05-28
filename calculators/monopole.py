@@ -17,9 +17,18 @@ def calc_f_theta(theta_rad):
     if abs(s) < 1e-10: return 0.0
     return abs(math.cos((math.pi / 2) * math.cos(theta_rad)) / s)
 def calc_pattern_arrays():
-    theta_deg = list(range(361))
-    e_db = [max(20 * math.log10(max(calc_f_theta(math.radians(d)), 1e-10)), -40.0) for d in theta_deg]
-    return theta_deg, e_db, [0.0] * 361
+    # A monopole over a perfect ground plane only radiates into the upper
+    # hemisphere. We sweep the polar plot angle from 0 deg (right horizon)
+    # through 90 deg (zenith) to 180 deg (left horizon). The antenna's
+    # elevation angle theta (measured from the vertical antenna axis) maps
+    # to the plot angle by theta = |90 - plot_angle|.
+    plot_deg = list(range(181))
+    e_db = []
+    for p in plot_deg:
+        antenna_theta = math.radians(abs(90 - p))
+        F = calc_f_theta(antenna_theta)
+        e_db.append(max(20 * math.log10(max(F, 1e-10)), -40.0))
+    return plot_deg, e_db, [0.0] * 181
 def validate_monopole(L, lam):
     if lam <= 0: return "error"
     r = L / lam

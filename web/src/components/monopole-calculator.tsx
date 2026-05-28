@@ -73,6 +73,7 @@ function buildPlotLayout(dark: boolean): Partial<Plotly.Layout> {
   const grid = dark ? "#334155" : "#e2e8f0";
   return {
     polar: {
+      sector: [0, 180],
       radialaxis: {
         visible: true,
         range: [-40, 0],
@@ -80,8 +81,12 @@ function buildPlotLayout(dark: boolean): Partial<Plotly.Layout> {
         tickfont: { size: 9, color: text },
         gridcolor: grid,
         linecolor: grid,
+        angle: 90,
       },
       angularaxis: {
+        tickmode: "array",
+        tickvals: [0, 30, 60, 90, 120, 150, 180],
+        ticktext: ["90\u00b0", "60\u00b0", "30\u00b0", "0\u00b0", "-30\u00b0", "-60\u00b0", "-90\u00b0"],
         tickfont: { size: 9, color: text },
         gridcolor: grid,
         linecolor: grid,
@@ -184,20 +189,19 @@ export function MonopoleCalculator() {
         line: { color: "#3b82f6", width: 2 },
         fill: "toself",
         fillcolor: "rgba(59,130,246,0.12)",
-        name: "E-Plane",
+        name: "Norm F(\u03b8)",
       } as Plotly.Data,
       {
         type: "scatterpolar",
-        r: result.pattern_h_db,
-        theta: result.pattern_theta_deg,
+        r: [0, -40, 0],
+        theta: [0, 90, 180],
         mode: "lines",
-        line: { color: "#f97316", width: 2 },
-        fill: "toself",
-        fillcolor: "rgba(249,115,22,0.12)",
-        name: "H-Plane",
+        line: { color: isDark ? "#e2e8f0" : "#0f172a", width: 2 },
+        name: "Ground",
+        hoverinfo: "skip",
       } as Plotly.Data,
     ];
-  }, [result]);
+  }, [result, isDark]);
 
   async function onCopy() {
     if (!result) return;

@@ -135,6 +135,10 @@ export function MonopoleLegacyCalculator() {
   const [result, setResult] = useState<MonopoleResult | null>(null);
   const [running, setRunning] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [currentMode, setCurrentMode] = useState<"rms" | "peak">("rms");
+  const [freqMode, setFreqMode] = useState<"freq" | "lambda">("freq");
+  const [lambdaValue, setLambdaValue] = useState("");
+  const [lambdaUnit, setLambdaUnit] = useState("m");
   const isDark = useDarkMode();
   const plotLayout = useMemo(() => buildPlotLayout(isDark), [isDark]);
 
@@ -145,12 +149,23 @@ export function MonopoleLegacyCalculator() {
     e.preventDefault();
     setRunning(true);
     try {
+      const LAMBDA_MULT: Record<string, number> = { m: 1, cm: 0.01, mm: 0.001 };
+      const freqHz = freqMode === "lambda"
+        ? C / (parseFloat(lambdaValue) * LAMBDA_MULT[lambdaUnit])
+        : Number(form.freq_value) * FREQ_MULTIPLIERS[form.freq_unit];
+      if (!isFinite(freqHz) || freqHz <= 0) {
+        toast.error("Invalid wavelength / frequency value.");
+        setRunning(false);
+        return;
+      }
       const payload = {
-        freq_value: Number(form.freq_value),
-        freq_unit: form.freq_unit,
+        freq_value: freqHz,
+        freq_unit: "Hz",
         length_value: Number(form.length_value),
         length_unit: form.length_unit,
-        current: Number(form.current),
+        current: currentMode === "peak"
+          ? Number(form.current) / Math.SQRT2
+          : Number(form.current),
         loss_resistance: Number(form.loss_resistance),
         distance: Number(form.distance),
         theta_deg: Number(form.theta_deg),
@@ -266,21 +281,47 @@ export function MonopoleLegacyCalculator() {
         </CardHeader>
         <CardContent>
           <form onSubmit={onCalculate} className="space-y-3">
-            <PairField
-              label="Frequency"
-              valueProps={{
-                value: form.freq_value,
-                onChange: (e) => update("freq_value", e.target.value),
-                type: "number",
-                step: "any",
-                required: true,
-              }}
-              unitProps={{
-                value: form.freq_unit,
-                onChange: (e) => update("freq_unit", e.target.value),
-              }}
-              units={["Hz", "kHz", "MHz", "GHz"]}
-            />
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label>Frequency / Wavelength</Label>
+                <span className="flex gap-3 text-xs">
+                  <label className="flex items-center gap-1 cursor-pointer">
+                    <input type="radio" checked={freqMode === "freq"} onChange={() => setFreqMode("freq")} /> Frequency
+                  </label>
+                  <label className="flex items-center gap-1 cursor-pointer">
+                    <input type="radio" checked={freqMode === "lambda"} onChange={() => setFreqMode("lambda")} /> λ
+                  </label>
+                </span>
+              </div>
+              {freqMode === "freq" ? (
+                <div className="flex gap-2">
+                  <Input className="flex-1" type="number" step="any" required
+                    value={form.freq_value} onChange={(e) => update("freq_value", e.target.value)} />
+                  <select className="w-24 rounded-md border border-input bg-background px-2 py-2 text-sm"
+                    value={form.freq_unit} onChange={(e) => update("freq_unit", e.target.value)}>
+                    {["Hz", "kHz", "MHz", "GHz"].map((u) => <option key={u} value={u}>{u}</option>)}
+                  </select>
+                </div>
+              ) : (
+                <>
+                  <div className="flex gap-2">
+                    <Input className="flex-1" type="number" step="any" required
+                      placeholder="wavelength" value={lambdaValue} onChange={(e) => setLambdaValue(e.target.value)} />
+                    <select className="w-24 rounded-md border border-input bg-background px-2 py-2 text-sm"
+                      value={lambdaUnit} onChange={(e) => setLambdaUnit(e.target.value)}>
+                      {["m", "cm", "mm"].map((u) => <option key={u} value={u}>{u}</option>)}
+                    </select>
+                  </div>
+                  {lambdaValue && (() => {
+                    const MULT: Record<string, number> = { m: 1, cm: 0.01, mm: 0.001 };
+                    const f = C / (parseFloat(lambdaValue) * MULT[lambdaUnit]);
+                    return isFinite(f) && f > 0
+                      ? <p className="text-xs text-muted-foreground">f = {f >= 1e9 ? (f/1e9).toFixed(4)+' GHz' : f >= 1e6 ? (f/1e6).toFixed(4)+' MHz' : f >= 1e3 ? (f/1e3).toFixed(4)+' kHz' : f.toFixed(2)+' Hz'}</p>
+                      : null;
+                  })()}
+                </>
+              )}
+            </div>
             <PairField
               label="Length"
               valueProps={{
@@ -296,11 +337,30 @@ export function MonopoleLegacyCalculator() {
               }}
               units={["m", "cm", "mm"]}
             />
-            <ScalarField
-              label="Current (A)"
-              value={form.current}
-              onChange={(v) => update("current", v)}
-            />
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label>Current</Label>
+                <span className="flex gap-3 text-xs">
+                  <label className="flex items-center gap-1 cursor-pointer">
+                    <input type="radio" checked={currentMode === "rms"} onChange={() => setCurrentMode("rms")} /> RMS (Iₚₘₛ)
+                  </label>
+                  <label className="flex items-center gap-1 cursor-pointer">
+                    <input type="radio" checked={currentMode === "peak"} onChange={() => setCurrentMode("peak")} /> Peak (I₀)
+                  </label>
+                </span>
+              </div>
+              <Input
+                type="number"
+                step="any"
+                placeholder={currentMode === "rms" ? "RMS current (A)" : "Peak current I₀ (A)"}
+                value={form.current}
+                onChange={(e) => update("current", e.target.value)}
+                required
+              />
+              {currentMode === "peak" && form.current && (
+                <p className="text-xs text-muted-foreground">Iₚₘₛ = I₀ / √2 ≈ {(Number(form.current) / Math.SQRT2).toFixed(5)} A</p>
+              )}
+            </div>
             <button
               type="button"
               className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"

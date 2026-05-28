@@ -91,8 +91,8 @@ def _bisect_pattern(target_F, n=60):
 
 _SOLVERS = {
     # --- Radiation Resistance ---
-    "rr_short":       lambda p: _40PI2 * (p["L"] / p["lam"]) ** 2,
-    "rr_uniform":     lambda p: _160PI2 * (p["L"] / p["lam"]) ** 2,
+    "rr_short":       lambda p: _40PI2 * ((p["lam"] / 4) / p["lam"]) ** 2,
+    "rr_uniform":     lambda p: _160PI2 * ((p["lam"] / 4) / p["lam"]) ** 2,
     "rr_from_power":  lambda p: p["Prad"] / p["Irms"] ** 2,
     "rr_constant":    lambda p: 36.5,
     "L_from_rr":      lambda p: p["lam"] * math.sqrt(p["Rr"] / _40PI2),
@@ -145,10 +145,14 @@ _SOLVERS = {
     "theta_from_F":    lambda p: _bisect_pattern(p["F"]),
 }
 
-# Human-readable metadata for each solver key (used by the UI)
+_DERIVED_FNS: dict = {
+    "rr_short":   lambda p: {"L": p["lam"] / 4},
+    "rr_uniform": lambda p: {"L": p["lam"] / 4},
+}
+
 SOLVER_META = {
-    "rr_short":        {"label": "Rr = 40π²(L/λ)²",          "inputs": ["L", "lam"],         "unit": "Ω",    "category": "Radiation Resistance", "target": "Rr"},
-    "rr_uniform":      {"label": "Rr = 160π²(L/λ)²",         "inputs": ["L", "lam"],         "unit": "Ω",    "category": "Radiation Resistance", "target": "Rr"},
+    "rr_short":        {"label": "Rr = 40π²(L/λ)²,  L = λ/4",     "inputs": ["lam"],              "derived": ["L"],  "unit": "Ω",    "category": "Radiation Resistance", "target": "Rr"},
+    "rr_uniform":      {"label": "Rr = 160π²(L/λ)², L = λ/4",    "inputs": ["lam"],              "derived": ["L"],  "unit": "Ω",    "category": "Radiation Resistance", "target": "Rr"},
     "rr_from_power":   {"label": "Rr = Prad / Irms²",         "inputs": ["Prad", "Irms"],     "unit": "Ω",    "category": "Radiation Resistance", "target": "Rr"},
     "rr_constant":     {"label": "Rr = 36.5 Ω (λ/4)",        "inputs": [],                   "unit": "Ω",    "category": "Radiation Resistance", "target": "Rr"},
     "L_from_rr":       {"label": "L = λ√(Rr / 40π²)",        "inputs": ["Rr", "lam"],        "unit": "m",    "category": "Radiation Resistance", "target": "L"},
@@ -242,6 +246,9 @@ def solve(solver_key, params):
     fn = _SOLVERS[solver_key]
     result = fn(params)
     meta = SOLVER_META[solver_key]
+    derived = {}
+    if solver_key in _DERIVED_FNS:
+        derived = _DERIVED_FNS[solver_key](params)
     return {
         "result": result,
         "unit": meta["unit"],
@@ -249,6 +256,7 @@ def solve(solver_key, params):
         "solver_key": solver_key,
         "solver_meta": meta,
         "input_labels": {k: INPUT_LABELS.get(k, k) for k in meta["inputs"]},
+        "derived": derived,
     }
 
 

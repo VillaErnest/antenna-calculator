@@ -58,6 +58,11 @@ type SolveResult = {
   solver_key: string;
   solver_meta: SolverMeta;
   input_labels: Record<string, string>;
+  derived?: Record<string, number>;
+};
+
+const DERIVED_LABELS: Record<string, { label: string; unit: string }> = {
+  L: { label: "Physical Length L", unit: "m" },
 };
 
 const defaultForm = {
@@ -783,15 +788,34 @@ function SolveParameterPanel({ isReady }: { isReady: boolean }) {
                   </p>
                 )}
               </div>
+              {/* Show derived (auto-calculated) values */}
+              {result.derived && Object.keys(result.derived).length > 0 && (
+                <div className="rounded-lg border border-dashed px-4 py-3 space-y-1">
+                  <p className="text-xs font-semibold text-muted-foreground">Auto-calculated</p>
+                  {Object.entries(result.derived).map(([k, v]) => (
+                    <div key={k} className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">{DERIVED_LABELS[k]?.label ?? k}</span>
+                      <span className="font-mono">{formatNumber(v)} {DERIVED_LABELS[k]?.unit ?? ""}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               {/* Show inputs used */}
               {Object.keys(result.input_labels).length > 0 && (
                 <div>
                   <p className="text-xs font-semibold text-muted-foreground mb-2">Inputs used</p>
                   <ResultsTable
-                    rows={Object.entries(result.input_labels).map(([k, lbl]) => ({
-                      label: lbl,
-                      value: paramValues[k] ?? "—",
-                    }))}
+                    rows={Object.entries(result.input_labels).map(([k, lbl]) => {
+                      let value = paramValues[k] ?? "—";
+                      if (k === "lam" && lamMode === "freq") {
+                        const fv = parseFloat(freqValue);
+                        if (!isNaN(fv) && fv > 0) {
+                          const lam = C / (fv * FREQ_MULTIPLIERS[freqUnit]);
+                          value = `${lam.toFixed(5)} m (from ${freqValue} ${freqUnit})`;
+                        }
+                      }
+                      return { label: lbl, value };
+                    })}
                   />
                 </div>
               )}
